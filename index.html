@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Birth Lottery | 命運交換所</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --accent-color: #ffffff;
+            --border-color: #333333;
+            --iq-color: #ffffff;
+            --wealth-color: #888888;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+            letter-spacing: 0.05em;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-weight: 200;
+            font-size: 2rem;
+            text-transform: uppercase;
+        }
+
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        input[type="number"] {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--accent-color);
+            color: white;
+            font-size: 1.5rem;
+            text-align: center;
+            width: 120px;
+            padding: 10px;
+            outline: none;
+        }
+
+        button {
+            background: white;
+            color: black;
+            border: none;
+            padding: 12px 30px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: opacity 0.3s;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        #result-area {
+            display: none;
+            width: 100%;
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+
+        .stat-card {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 40px 0;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            font-weight: 400;
+            color: #888;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            margin-bottom: 40px;
+        }
+
+        .reset-btn {
+            background: transparent;
+            color: #888;
+            border: 1px solid #444;
+            margin-top: 20px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 隱藏 Chrome/Safari 的輸入框箭頭 */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Birth Lottery Exchange</h1>
+            <p style="color: #666;">命運交換所：假如出生時的財富與智商是成反比的...</p>
+        </header>
+
+        <div class="input-section" id="input-group">
+            <p>我想出生在世界財富前幾N%？ 但你的智商為60*3^(100-N)</p>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span>N=</span>
+                <input type="number" id="n-value" placeholder="0-100" min="0" max="100" step="0.1">
+                <span>%</span>
+            </div>
+            <button onclick="calculate()">計算結果</button>
+        </div>
+
+        <div id="result-area">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">預計智商 (IQ)</div>
+                    <div class="stat-value" id="res-iq">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">財富百分位</div>
+                    <div class="stat-value" id="res-percent">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">大約個人財富</div>
+                    <div class="stat-value" id="res-wealth">-</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
+            </div>
+
+            <h3>全球財富分配參考 (2025 UBS 近似數據)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>財富階層 (Top %)</th>
+                        <th>資產範圍 (USD)</th>
+                        <th>對應本系統 IQ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>1%</td><td>$1,200,000 以上</td><td>~61</td></tr>
+                    <tr><td>10%</td><td>$150,000 - $1.2M</td><td>~67</td></tr>
+                    <tr><td>50%</td><td>$10,000 - $150,000</td><td>~104</td></tr>
+                    <tr><td>100%</td><td>$0</td><td>180</td></tr>
+                </tbody>
+            </table>
+
+            <div style="text-align: center;">
+                <button class="reset-btn" onclick="reset()">重新輸入</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let myChart = null;
+
+        // 財富估計函數：更貼近真實分布 (單位：千美元)
+        function getWealth(n) {
+            if (n <= 1) {
+                // Top 1% 以內的指數增長 (0% 為無限財富，此處設 100M 上限做圖)
+                return 1200 * Math.pow(80, (1 - n)); 
+            } else if (n <= 10) {
+                // 1% 到 10% 線性過度到 150k
+                return 1200 - (n - 1) * (1050 / 9);
+            } else if (n <= 50) {
+                // 10% 到 50% 
+                return 150 - (n - 10) * (140 / 40);
+            } else {
+                // 50% 以下緩慢衰減到 0
+                return 10 * Math.pow(0.95, (n - 50));
+            }
+        }
+
+        function getIQ(n) {
+            return 60 * Math.pow(3, n / 100);
+        }
+
+        function calculate() {
+            const n = parseFloat(document.getElementById('n-value').value);
+            if (isNaN(n) || n < 0 || n > 100) {
+                alert("請輸入 0 到 100 之間的數值");
+                return;
+            }
+
+            const iq = getIQ(n);
+            const wealth = getWealth(n);
+
+            // 更新文字結果
+            document.getElementById('res-iq').innerText = iq.toFixed(1);
+            document.getElementById('res-percent').innerText = `Top ${n.toFixed(1)}%`;
+            document.getElementById('res-wealth').innerText = `$${(wealth * 1000).toLocaleString('en-US', {maximumFractionDigits: 0})}`;
+
+            // 顯示結果區域
+            document.getElementById('input-group').style.display = 'none';
+            document.getElementById('result-area').style.display = 'block';
+
+            renderChart(n);
+        }
+
+        function renderChart(userN) {
+            const labels = [];
+            const iqData = [];
+            const wealthData = [];
+
+            for (let i = 0; i <= 100; i += 2) {
+                labels.push(i);
+                iqData.push(getIQ(i));
+                wealthData.push(getWealth(i));
+            }
+
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            
+            if (myChart) myChart.destroy();
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'IQ 曲線',
+                            data: iqData,
+                            borderColor: '#ffffff',
+                            borderWidth: 2,
+                            yAxisID: 'yIQ',
+                            pointRadius: 0
+                        },
+                        {
+                            label: '財富曲線 (kUSD)',
+                            data: wealthData,
+                            borderColor: '#555555',
+                            borderWidth: 2,
+                            yAxisID: 'yWealth',
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            label: '你的選擇',
+                            data: [{x: userN, y: getIQ(userN)}],
+                            backgroundColor: '#ff3e3e',
+                            borderColor: '#ff3e3e',
+                            pointRadius: 6,
+                            type: 'scatter',
+                            yAxisID: 'yIQ'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Top n% (財富百分比)', color: '#666' },
+                            grid: { color: '#222' },
+                            ticks: { color: '#666' }
+                        },
+                        yIQ: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: true, text: 'IQ', color: '#fff' },
+                            grid: { color: '#222' },
+                            ticks: { color: '#fff' }
+                        },
+                        yWealth: {
+                            type: 'logarithmic', // 使用對數座標顯示財富差距
+                            position: 'right',
+                            title: { display: true, text: '財富 (千美元)', color: '#888' },
+                            grid: { display: false },
+                            ticks: { 
+                                color: '#888',
+                                callback: function(value) { return '$' + value + 'k'; }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#fff' } }
+                    }
+                }
+            });
+        }
+
+        function reset() {
+            document.getElementById('input-group').style.display = 'flex';
+            document.getElementById('result-area').style.display = 'none';
+            document.getElementById('n-value').value = '';
+        }
+    </script>
+</body>
+</html>
