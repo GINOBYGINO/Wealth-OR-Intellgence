@@ -53,7 +53,6 @@
             font-size: 0.9rem;
         }
 
-        /* 輸入區塊 */
         .input-section {
             background: #0a0a0a;
             padding: 30px 20px;
@@ -86,7 +85,7 @@
             color: white;
             font-size: 2rem;
             text-align: center;
-            width: 100px;
+            width: 120px;
             padding: 5px;
             outline: none;
             font-family: serif;
@@ -108,7 +107,6 @@
 
         button:active { transform: scale(0.98); }
 
-        /* 結果顯示區 */
         #result-area {
             display: none;
             animation: fadeIn 0.6s ease-out;
@@ -140,7 +138,6 @@
             font-weight: 600;
         }
 
-        /* 圖表與表格 */
         .chart-container {
             height: 320px;
             margin: 20px 0;
@@ -183,12 +180,10 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 手機版適配 */
         @media (max-width: 480px) {
             .stats-grid { grid-template-columns: 1fr; }
             .stat-card { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
             .stat-label { margin-bottom: 0; }
-            h1 { font-size: 1.5rem; }
         }
     </style>
 </head>
@@ -197,17 +192,17 @@
     <div class="container">
         <header>
             <h1>WEALTH OR IQ</h1>
-            <p class="desc">交換代價：出身決定財富，也決定了你的起點智力。</p>
+            <p class="desc">命運交換：財富地位與天賦智商的零和博弈。</p>
         </header>
 
         <div class="input-section" id="input-group">
             <p class="input-hint">
                 你想出生在世界財富前 N%？<br>
-                <small style="color:#ececec; margin-top:5px; display:block;">但智商會變為 60 × 3<sup>(N/100)</sup></small>
+                <small style="color:#cbcbcb; margin-top:5px; display:block;">但是智商將變為 60 × 3<sup>(N/100)</sup></small>
             </p>
             <div class="input-wrapper">
                 <span>N =</span>
-                <input type="number" id="n-value" placeholder="1.0" min="0.0" max="100" step="1.0" inputmode="decimal">
+                <input type="number" id="n-value" placeholder="10.0" min="0" max="100" step="4.0" inputmode="decimal">
                 <span>%</span>
             </div>
             <button onclick="calculate()">計算結果</button>
@@ -216,7 +211,7 @@
         <div id="result-area">
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-label">預計智商</div>
+                    <div class="stat-label">獲得智商</div>
                     <div class="stat-value" id="res-iq">-</div>
                 </div>
                 <div class="stat-card">
@@ -224,7 +219,7 @@
                     <div class="stat-value" id="res-percent">-</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">預估資產</div>
+                    <div class="stat-label">資產 (USD)</div>
                     <div class="stat-value" id="res-wealth">-</div>
                 </div>
             </div>
@@ -233,18 +228,17 @@
                 <canvas id="mainChart"></canvas>
             </div>
 
-            <h3 style="font-size: 1rem; font-weight: 300; margin-top: 40px;">全球財富金字塔參考 (2025)</h3>
+            <h3 style="font-size: 0.9rem; font-weight: 300; margin-top: 40px; color: #888;">財富金字塔參考 (2025 近似值)</h3>
             <div class="table-scroll">
                 <table>
                     <thead>
                         <tr>
-                            <th>財富階層 (Top %)</th>
-                            <th>資產 (USD)</th>
+                            <th>階層 (Top %)</th>
+                            <th>資產預估 (USD)</th>
                             <th>對應 IQ</th>
                         </tr>
                     </thead>
-                    <tbody id="reference-table">
-                        </tbody>
+                    <tbody id="reference-table"></tbody>
                 </table>
             </div>
 
@@ -257,13 +251,13 @@
     <script>
         let myChart = null;
 
-        // 財富估計函數 (單位：千美元)
+        // 微調後的財富函數 (單位：kUSD)
         function getWealth(n) {
-            if (n <= 0.1) return 50000; // 封頂顯示
-            if (n <= 1) return 1200 * Math.pow(40, (1 - n)); 
-            if (n <= 10) return 1200 - (n - 1) * (1050 / 9);
-            if (n <= 50) return 150 - (n - 10) * (140 / 40);
-            return 10 * Math.pow(0.92, (n - 50));
+            if (n <= 0.1) return 50000; // Top 0.1% -> $50M
+            if (n <= 1) return 1500 * Math.pow(33.3, (1 - n)); // Top 1% -> $1.5M
+            if (n <= 10) return 150 + (1 - (n - 1) / 9) * (1500 - 150); // Linear down to $150k
+            if (n <= 50) return 10 + Math.pow((50 - n) / 40, 2) * (150 - 10); // Quadratic down to $10k
+            return 10 * Math.pow(0.9, n - 50); // Exponential decay for the bottom half
         }
 
         // 智商函數：60 * 3^(N/100)
@@ -281,9 +275,10 @@
             const iq = getIQ(n);
             const wealth = getWealth(n);
 
+            // 顯示邏輯：資產計算到個位數
             document.getElementById('res-iq').innerText = Math.round(iq);
             document.getElementById('res-percent').innerText = `Top ${n}%`;
-            document.getElementById('res-wealth').innerText = `$${(wealth * 1000).toLocaleString()}`;
+            document.getElementById('res-wealth').innerText = `$${Math.round(wealth * 1000).toLocaleString()}`;
 
             document.getElementById('input-group').style.display = 'none';
             document.getElementById('result-area').style.display = 'block';
@@ -293,11 +288,11 @@
         }
 
         function renderTable() {
-            const levels = [1, 10, 20, 50,70,90];
+            const levels = [0.1, 1, 10, 20, 50, 70, 90];
             const html = levels.map(l => `
                 <tr>
                     <td>Top ${l}%</td>
-                    <td>$${(getWealth(l)*1000).toLocaleString()}</td>
+                    <td>$${Math.round(getWealth(l) * 1000).toLocaleString()}</td>
                     <td>${Math.round(getIQ(l))}</td>
                 </tr>
             `).join('');
@@ -309,7 +304,8 @@
             const iqData = [];
             const wealthData = [];
 
-            for (let i = 0.5; i <= 100; i += 2) {
+            // 增加取樣密度以優化曲線
+            for (let i = 0; i <= 100; i += 1) {
                 labels.push(i);
                 iqData.push(getIQ(i));
                 wealthData.push(getWealth(i));
@@ -317,9 +313,6 @@
 
             const ctx = document.getElementById('mainChart').getContext('2d');
             if (myChart) myChart.destroy();
-
-            Chart.defaults.color = '#666';
-            Chart.defaults.font.size = 10;
 
             myChart = new Chart(ctx, {
                 type: 'line',
@@ -330,9 +323,10 @@
                             label: 'IQ',
                             data: iqData,
                             borderColor: '#ffffff',
-                            borderWidth: 1.5,
+                            borderWidth: 2,
                             yAxisID: 'yIQ',
-                            pointRadius: 0
+                            pointRadius: 0,
+                            order: 2
                         },
                         {
                             label: '財富(k)',
@@ -340,40 +334,63 @@
                             borderColor: '#444',
                             borderWidth: 1.5,
                             yAxisID: 'yWealth',
-                            pointRadius: 0
+                            pointRadius: 0,
+                            order: 3
                         },
                         {
                             label: 'YOU',
                             data: [{x: userN, y: getIQ(userN)}],
                             backgroundColor: '#ff3e3e',
+                            borderColor: '#ff3e3e',
                             pointRadius: 6,
+                            pointHoverRadius: 8,
                             type: 'scatter',
-                            yAxisID: 'yIQ'
+                            yAxisID: 'yIQ',
+                            order: 1
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
                     scales: {
                         x: { 
-                            title: { display: true, text: 'Top N%' },
-                            grid: { color: '#111' }
+                            type: 'linear',
+                            min: 0,
+                            max: 100,
+                            title: { display: true, text: 'Top N% (0=最富, 100=最窮)', color: '#666' },
+                            grid: { color: '#111' },
+                            ticks: { color: '#666' }
                         },
                         yIQ: {
                             position: 'left',
-                            title: { display: true, text: 'IQ', color: '#fff' },
-                            grid: { color: '#111' }
+                            min: 50,
+                            max: 200,
+                            title: { display: true, text: 'IQ Score', color: '#fff' },
+                            grid: { color: '#222' },
+                            ticks: { color: '#fff' }
                         },
                         yWealth: {
                             type: 'logarithmic',
                             position: 'right',
                             grid: { display: false },
-                            ticks: { callback: v => '$' + v + 'k' }
+                            ticks: { 
+                                color: '#888',
+                                callback: v => v >= 1 ? '$' + v + 'k' : v
+                            }
                         }
                     },
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    if (context.dataset.label === 'YOU') return '你的選擇點';
+                                    return `${context.dataset.label}: ${Math.round(context.raw)}`;
+                                }
+                            }
+                        }
                     }
                 }
             });
