@@ -1,4 +1,4 @@
-# Birth Lottery
+# WEALTH OR IQ
 
 > **如果出生時的財富，必須用智商來交換，你會選擇哪一種命運？**
 
